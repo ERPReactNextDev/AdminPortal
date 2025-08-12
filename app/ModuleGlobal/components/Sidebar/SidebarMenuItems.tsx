@@ -1,4 +1,5 @@
 import { FcLink, FcPuzzle, FcManager, FcLock, FcInfo, FcCommandLine } from "react-icons/fc";
+import { BsCloudHaze2Fill } from 'react-icons/bs';
 
 const getMenuItems = (
   userId: string | null = "",
@@ -16,6 +17,16 @@ const getMenuItems = (
       icon: FcLink,
       subItems: [
         { title: 'Links', href: `/ModuleGlobal/ERP/Links/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
+      ],
+    },
+    {
+      title: 'Cloudflare',
+      icon: BsCloudHaze2Fill,
+      subItems: [
+        { title: 'Analytics & Traffics', href: `/ModuleGlobal/ERP/Cloudflare/Analytics/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
+        { title: 'DNS', href: `/ModuleGlobal/ERP/Cloudflare/DNS/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
+        { title: 'Firewall Rules', href: `/ModuleGlobal/ERP/Cloudflare/Firewall/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
+        { title: 'Zones', href: `/ModuleGlobal/ERP/Cloudflare/Zone/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
       ],
     },
     {
