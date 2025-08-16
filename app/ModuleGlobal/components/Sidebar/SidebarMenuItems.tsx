@@ -13,13 +13,6 @@ const getMenuItems = (
       ],
     },
     {
-      title: 'Linker X',
-      icon: FcLink,
-      subItems: [
-        { title: 'Links', href: `/ModuleGlobal/ERP/Links/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
-      ],
-    },
-    {
       title: 'Cloudflare',
       icon: BsCloudHaze2Fill,
       subItems: [

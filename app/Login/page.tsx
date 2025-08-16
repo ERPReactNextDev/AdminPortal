@@ -112,7 +112,6 @@ const Login: React.FC = () => {
     }
 
     setLoading(true);
-
     try {
       const response = await fetch("/api/developerLogin", {
         method: "POST",
@@ -125,6 +124,22 @@ const Login: React.FC = () => {
       if (response.ok) {
         toast.success("Login successful!");
         setLoggedInUserId(result.userId);
+
+        // 🔹 log activity AFTER successful login
+        try {
+          await fetch("/api/log-activity", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: Email,
+              status: "login",
+              timestamp: new Date().toISOString(),
+            }),
+          });
+        } catch (logErr) {
+          console.error("Activity log error:", logErr);
+        }
+
         setShowLoading(true);
       } else {
         toast.error(result.message || "Login failed!");
@@ -136,6 +151,7 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   if (showLoading && loggedInUserId) {
     return <LoadingPage userId={loggedInUserId} />;
