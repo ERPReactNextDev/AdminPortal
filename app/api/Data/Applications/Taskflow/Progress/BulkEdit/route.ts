@@ -8,16 +8,16 @@ if (!Xchire_databaseUrl) {
 
 const Xchire_sql = neon(Xchire_databaseUrl);
 
-async function bulkupdate(userIds: string[], typeclient: string) {
+async function bulkupdate(userIds: string[], targetquota: string) {
     try {
-        if (!userIds || userIds.length === 0 || !typeclient) {
+        if (!userIds || userIds.length === 0 || !targetquota) {
             throw new Error("User IDs and typeclient are required.");
         }
 
         const Xchire_update = await Xchire_sql`
-            UPDATE accounts
+            UPDATE progress
             SET 
-                typeclient = ${typeclient},
+                targetquota = ${targetquota},
                 date_updated = CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Manila'
             WHERE id = ANY(${userIds})
             RETURNING *;
@@ -33,9 +33,9 @@ async function bulkupdate(userIds: string[], typeclient: string) {
 export async function PUT(req: Request) {
     try {
         const Xchire_body = await req.json();
-        const { userIds, typeclient } = Xchire_body;
+        const { userIds, targetquota } = Xchire_body;
 
-        const Xchire_result = await bulkupdate(userIds, typeclient);
+        const Xchire_result = await bulkupdate(userIds, targetquota);
 
         return NextResponse.json(Xchire_result);
     } catch (Xchire_error: any) {

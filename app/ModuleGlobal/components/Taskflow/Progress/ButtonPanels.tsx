@@ -12,8 +12,8 @@ interface Props {
     handleSelectAll: () => void;
     handleBulkDelete: () => void;
     handleBulkEdit: () => void;
-    newTypeClient: string;
-    setNewTypeClient: (val: string) => void;
+    newTargetQuota: string;
+    setNewTargetQuota: (val: string) => void;
 }
 
 const ButtonActions: React.FC<Props> = ({
@@ -26,8 +26,8 @@ const ButtonActions: React.FC<Props> = ({
     handleSelectAll,
     handleBulkDelete,
     handleBulkEdit,
-    newTypeClient,
-    setNewTypeClient
+    newTargetQuota,
+    setNewTargetQuota
 }) => {
     return (
         <>
@@ -64,7 +64,7 @@ const ButtonActions: React.FC<Props> = ({
                             </button>
                         )}
 
-                        {bulkEditMode && (
+                        {/*{bulkEditMode && (
                             <div className="flex items-center gap-2">
                                 <select value={newTypeClient} onChange={(e) => setNewTypeClient(e.target.value)} className="px-2 py-1 border rounded-md">
                                     <option value="">Select Client</option>
@@ -75,6 +75,13 @@ const ButtonActions: React.FC<Props> = ({
                                     <option value="TSA Client">TSA Client</option>
                                 </select>
                                 <button onClick={handleBulkEdit} className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs" disabled={!newTypeClient}>Apply Changes</button>
+                            </div>
+                        )}*/}
+
+                        {bulkEditMode && (
+                            <div className="flex items-center gap-2">
+                                <input value={newTargetQuota} onChange={(e) => setNewTargetQuota(e.target.value)} className="px-2 py-1 border rounded-md" />
+                                <button onClick={handleBulkEdit} className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs" disabled={!newTargetQuota}>Apply Changes</button>
                             </div>
                         )}
                     </div>
