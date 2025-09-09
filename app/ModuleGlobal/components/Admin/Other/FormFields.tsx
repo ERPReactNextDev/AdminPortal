@@ -258,7 +258,6 @@ const UserFormFields: React.FC<FormFieldsProps> = ({
             </div>
           </>
         )}
-
       </div>
     </>
   );

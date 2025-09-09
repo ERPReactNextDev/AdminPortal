@@ -88,7 +88,7 @@ const ListofUser: React.FC = () => {
         // Allow both 'Admin' and 'Super Admin' roles in 'IT Department'
         const isAllowedRole =
             (post?.Role === "Admin") &&
-            post?.Department === "IT Department";
+            post?.Department === "IT";
 
         return matchesSearchTerm && isAllowedRole;
     });
