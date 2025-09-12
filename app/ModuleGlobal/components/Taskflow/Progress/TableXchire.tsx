@@ -16,8 +16,12 @@ interface TableXchireProps {
   statusColors: Record<string, string>;
 }
 
-const formatDate = (timestamp: number): string => {
-  return format(timestamp, "MMM dd, yyyy");
+// Safe date formatting
+const formatDateSafe = (date?: string | number | null): string => {
+  if (!date) return "N/A";
+  const parsedDate = new Date(date);
+  if (isNaN(parsedDate.getTime())) return "Invalid Date";
+  return format(parsedDate, "MMM dd, yyyy");
 };
 
 const TableXchire: React.FC<TableXchireProps> = React.memo(
@@ -109,17 +113,16 @@ const TableXchire: React.FC<TableXchireProps> = React.memo(
           <td className="px-6 py-4 text-xs align-top">
             <div className="flex flex-col gap-1">
               <span className="text-white bg-blue-900 p-2 rounded">
-                Duration: {formatDate(new Date(post.startdate).getTime())} -{" "}
-                {formatDate(new Date(post.enddate).getTime())}
+                Duration: {formatDateSafe(post.startdate)} - {formatDateSafe(post.enddate)}
               </span>
               <span className="text-black bg-orange-300 p-2 rounded">
-                Callback: {formatDate(new Date(post.callback).getTime())}
+                Callback: {formatDateSafe(post.callback)}
               </span>
               <span className="text-black bg-blue-300 p-2 rounded">
-                Created: {formatDate(new Date(post.date_created).getTime())}
+                Created: {formatDateSafe(post.date_created)}
               </span>
               <span className="text-black bg-green-300 p-2 rounded">
-                Updated: {formatDate(new Date(post.date_updated).getTime())}
+                Updated: {formatDateSafe(post.date_updated)}
               </span>
             </div>
           </td>
@@ -180,9 +183,7 @@ const TableXchire: React.FC<TableXchireProps> = React.memo(
         <tfoot className="bg-gray-100 text-xs font-semibold">
           <tr>
             {showCheckbox && <td className="px-6 py-3 text-gray-700">Total</td>}
-            <td colSpan={8} className="px-6 py-3 text-gray-700">
-              Totals
-            </td>
+            <td colSpan={8} className="px-6 py-3 text-gray-700">Totals</td>
             <td className="px-6 py-3 text-gray-700">{totalQuotation.toLocaleString()}</td>
             <td></td>
             <td className="px-6 py-3 text-gray-700">{totalSOAmount.toLocaleString()}</td>
