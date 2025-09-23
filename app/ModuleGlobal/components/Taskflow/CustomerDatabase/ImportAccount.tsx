@@ -67,7 +67,6 @@ const ImportForm: React.FC<ImportFormProps> = ({
           referenceid,
           tsm,
           manager,
-          status,
           companyname: row.getCell(1).value || "",
           contactperson: row.getCell(2).value || "",
           contactnumber: row.getCell(3).value || "",
@@ -75,6 +74,9 @@ const ImportForm: React.FC<ImportFormProps> = ({
           typeclient: row.getCell(5).value || "",
           address: row.getCell(6).value || "",
           area: row.getCell(7).value || "",
+          status: row.getCell(8).value || "",
+          companygroup: row.getCell(9).value || "",
+          deliveryaddress: row.getCell(10).value || "",
         });
       });
 
@@ -110,7 +112,6 @@ const ImportForm: React.FC<ImportFormProps> = ({
             referenceid,
             tsm,
             manager,
-            status,
             companyname: row.getCell(1).value || "",
             contactperson: row.getCell(2).value || "",
             contactnumber: row.getCell(3).value || "",
@@ -118,6 +119,9 @@ const ImportForm: React.FC<ImportFormProps> = ({
             typeclient: row.getCell(5).value || "",
             address: row.getCell(6).value || "",
             area: row.getCell(7).value || "",
+            status: row.getCell(8).value || "",
+            companygroup: row.getCell(9).value || "",
+            deliveryaddress: row.getCell(10).value || "",
           });
         });
 
@@ -126,7 +130,7 @@ const ImportForm: React.FC<ImportFormProps> = ({
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ referenceid, tsm, manager, status, data: jsonData }),
+          body: JSON.stringify({ referenceid, tsm, manager, data: jsonData }),
         });
 
         const result = await response.json();
@@ -350,20 +354,6 @@ const ImportForm: React.FC<ImportFormProps> = ({
             )}
           </div>
 
-          {/* Status */}
-          <div className="w-full sm:w-1/2 md:w-1/2 px-4 mb-4">
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-3 py-2 border-b bg-white text-xs capitalize"
-            >
-              <option value="">Select Status</option>
-              <option value="Active">Active</option>
-              <option value="Used">Used</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-
           {/* File Upload */}
           <div className="w-full sm:w-1/2 md:w-1/2 px-4 mb-4">
             <input
@@ -417,6 +407,9 @@ const ImportForm: React.FC<ImportFormProps> = ({
                   <th className="border px-2 py-1">Type of Client</th>
                   <th className="border px-2 py-1">Address</th>
                   <th className="border px-2 py-1">Area</th>
+                  <th className="border px-2 py-1">Status</th>
+                  <th className="border px-2 py-1">Company Group</th>
+                  <th className="border px-2 py-1">Delivery Address</th>
                 </tr>
               </thead>
               <tbody>
@@ -429,6 +422,9 @@ const ImportForm: React.FC<ImportFormProps> = ({
                     <td className="border px-2 py-1">{item.typeclient}</td>
                     <td className="border px-2 py-1">{item.address}</td>
                     <td className="border px-2 py-1">{item.area}</td>
+                    <td className="border px-2 py-1">{item.status}</td>
+                    <td className="border px-2 py-1">{item.companygroup}</td>
+                    <td className="border px-2 py-1">{item.deliveryaddress}</td>
                   </tr>
                 ))}
               </tbody>

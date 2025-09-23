@@ -253,6 +253,9 @@ const ListofUser: React.FC = () => {
             { header: 'typeclient', key: 'typeclient', width: 20 },
             { header: 'address', key: 'address', width: 20 },
             { header: 'area', key: 'area', width: 20 },
+            { header: 'status', key: 'status', width: 20 },
+            { header: 'companygroup', key: 'companygroup', width: 20 },
+            { header: 'deliveryaddress', key: 'deliveryaddress', width: 20 },
         ];
 
         // Loop through all filtered posts to ensure the full set of data is exported
@@ -264,7 +267,10 @@ const ListofUser: React.FC = () => {
                 emailaddress: post.emailaddress,
                 typeclient: post.typeclient,
                 address: post.address,
-                area: post.area
+                area: post.area,
+                status: post.status,
+                companygroup: post.companygroup,
+                deliveryaddress: post.deliveryaddress,
             });
         });
 
