@@ -11,6 +11,7 @@ interface Post {
   typeclient: string;
   referenceid: string;
   tsm: string;
+  manager: string;
   status: string;
   remarks: string;
   date_created: string;
@@ -139,7 +140,7 @@ const TableXchire: React.FC<TableXchireProps> = ({
                 <td className="px-6 py-4 text-xs capitalize">{post.area}</td>
                 <td className="px-6 py-4 text-xs">{post.typeclient}</td>
                 <td className="px-6 py-4 text-xs">
-                  <strong>{post.referenceid}</strong> | {post.tsm}
+                  <strong>{post.referenceid}</strong> | {post.tsm} <br />{post.manager}
                 </td>
                 <td className="px-6 py-4 text-xs">{post.remarks}</td>
                 <td className="px-4 py-2 text-xs align-top">
