@@ -86,7 +86,11 @@ const Inquiries: React.FC = () => {
 
     const filteredAccounts = Array.isArray(posts)
         ? posts.filter((post) => {
-            const matchesSearch = post?.referenceid?.toLowerCase().includes(searchTerm.toLowerCase());
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch =
+                post?.referenceid?.toLowerCase().includes(searchLower) ||
+                post?.companyname?.toLowerCase().includes(searchLower);
+
             const postDate = new Date(post?.date_created);
             const isWithinDateRange =
                 (!startDate || new Date(startDate) <= postDate) &&
@@ -95,6 +99,7 @@ const Inquiries: React.FC = () => {
             return matchesSearch && isWithinDateRange;
         })
         : [];
+
 
     const indexOfLastPost = currentPage * postsPerPage;
     const indexOfFirstPost = indexOfLastPost - postsPerPage;
