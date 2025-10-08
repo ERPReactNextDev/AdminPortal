@@ -177,7 +177,7 @@ const ButtonActions: React.FC<ButtonActionsProps> = ({
                             <div className="flex items-center gap-2">
                                 <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="px-2 py-1 border rounded-md">
                                     <option value="">Select Status</option>
-                                    <option value="Used">Active</option>
+                                    <option value="Active">Active</option>
                                     <option value="New Client">New Client</option>
                                     <option value="Inactive">Inactive</option>
                                     <option value="Non-Buying">Non-Buying</option>
