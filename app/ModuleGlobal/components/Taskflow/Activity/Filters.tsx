@@ -88,6 +88,14 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
           <option value="For Deletion">For Deletion</option>
           <option value="Remove">Remove</option>
           <option value="Approve For Deletion">Approve For Deletion</option>
+          <option value="Cold">Cold</option>
+          <option value="Warm">Warm</option>
+          <option value="Hot">Hot</option>
+          <option value="Done">Done</option>
+          <option value="Assisted">Assisted</option>
+          <option value="Quote-Done">Quote-Done</option>
+          <option value="SO-Done">SO-Done</option>
+          <option value="Delivered">Delivered</option>
         </select>
 
         {/* ✅ TSA Filter */}
