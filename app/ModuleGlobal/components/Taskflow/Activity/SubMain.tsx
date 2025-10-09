@@ -21,8 +21,8 @@ interface SubMainProps {
   handleBulkDelete: () => void;
   handleBulkEdit: () => void;
   handleSelectAll: () => void;
-  newTypeClient: string;
-  setNewTypeClient: (val: string) => void;
+  newStatus: string;
+  setNewStatus: (val: string) => void;
 }
 
 const SubMain: React.FC<SubMainProps> = ({
@@ -41,8 +41,8 @@ const SubMain: React.FC<SubMainProps> = ({
   handleBulkDelete,
   handleBulkEdit,
   handleSelectAll,
-  newTypeClient,
-  setNewTypeClient,
+  newStatus,
+  setNewStatus,
 }) => {
   return (
     <div className="mb-4">
@@ -56,8 +56,8 @@ const SubMain: React.FC<SubMainProps> = ({
         handleSelectAll={handleSelectAll}
         handleBulkDelete={handleBulkDelete}
         handleBulkEdit={handleBulkEdit}
-        newTypeClient={newTypeClient}
-        setNewTypeClient={setNewTypeClient}
+        newStatus={newStatus}
+        setNewStatus={setNewStatus}
       />
 
       <div className="flex space-x-2 mb-4 text-[10px]">

@@ -11,7 +11,7 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
     const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
     const [bulkEditMode, setBulkEditMode] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-    const [newTypeClient, setNewTypeClient] = useState("");
+    const [newStatus, setNewStatus] = useState("");
     const [activeTab, setActiveTab] = useState("table");
 
     useEffect(() => {
@@ -26,7 +26,7 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
     const toggleBulkEditMode = useCallback(() => {
         setBulkEditMode((prev) => !prev);
         setSelectedUsers(new Set());
-        setNewTypeClient("");
+        setNewStatus("");
     }, []);
 
     const handleSelectUser = useCallback((userId: string) => {
@@ -60,16 +60,16 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
     }, [selectedUsers]);
 
     const handleBulkEdit = useCallback(async () => {
-        if (selectedUsers.size === 0 || !newTypeClient) return;
+        if (selectedUsers.size === 0 || !newStatus) return;
         try {
             const response = await fetch(`/api/ModuleSales/UserManagement/CompanyAccounts/Bulk-Edit`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userIds: Array.from(selectedUsers), typeclient: newTypeClient }),
+                body: JSON.stringify({ userIds: Array.from(selectedUsers), status: newStatus }),
             });
             if (response.ok) {
                 setUpdatedUser((prev) => prev.map((user) =>
-                    selectedUsers.has(user.id) ? { ...user, typeclient: newTypeClient } : user
+                    selectedUsers.has(user.id) ? { ...user, status: newStatus } : user
                 ));
                 setSelectedUsers(new Set());
                 setBulkEditMode(false);
@@ -79,7 +79,7 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
         } catch (error) {
             console.error("Error updating users:", error);
         }
-    }, [selectedUsers, newTypeClient]);
+    }, [selectedUsers, newStatus]);
 
     const handleSelectAll = useCallback(() => {
         if (selectedUsers.size === updatedUser.length) {
@@ -158,8 +158,8 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
             handleBulkDelete={handleBulkDelete}
             handleBulkEdit={handleBulkEdit}
             handleSelectAll={handleSelectAll}
-            newTypeClient={newTypeClient}
-            setNewTypeClient={setNewTypeClient}
+            newStatus={newStatus}
+            setNewStatus={setNewStatus}
         />
     );
 };

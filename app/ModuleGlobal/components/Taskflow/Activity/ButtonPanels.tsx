@@ -12,8 +12,8 @@ interface Props {
     handleSelectAll: () => void;
     handleBulkDelete: () => void;
     handleBulkEdit: () => void;
-    newTypeClient: string;
-    setNewTypeClient: (val: string) => void;
+    newStatus: string;
+    setNewStatus: (val: string) => void;
 }
 
 const ButtonActions: React.FC<Props> = ({
@@ -26,8 +26,8 @@ const ButtonActions: React.FC<Props> = ({
     handleSelectAll,
     handleBulkDelete,
     handleBulkEdit,
-    newTypeClient,
-    setNewTypeClient
+    newStatus,
+    setNewStatus
 }) => {
     return (
         <>
@@ -66,15 +66,13 @@ const ButtonActions: React.FC<Props> = ({
 
                         {bulkEditMode && (
                             <div className="flex items-center gap-2">
-                                <select value={newTypeClient} onChange={(e) => setNewTypeClient(e.target.value)} className="px-2 py-1 border rounded-md">
-                                    <option value="">Select Client</option>
-                                    <option value="Top 50">Top 50</option>
-                                    <option value="Next 30">Next 30</option>
-                                    <option value="Balance 20">Balance 20</option>
-                                    <option value="CSR Client">CSR Client</option>
-                                    <option value="TSA Client">TSA Client</option>
+                                <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="px-2 py-1 border rounded-md">
+                                    <option value="">Select Status</option>
+                                    <option value="On Progress">On Progress</option>
+                                    <option value="Done">Done</option>
+                                    <option value="Delivered">Delivered</option>
                                 </select>
-                                <button onClick={handleBulkEdit} className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs" disabled={!newTypeClient}>Apply Changes</button>
+                                <button onClick={handleBulkEdit} className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs" disabled={!newStatus}>Apply Changes</button>
                             </div>
                         )}
                     </div>
