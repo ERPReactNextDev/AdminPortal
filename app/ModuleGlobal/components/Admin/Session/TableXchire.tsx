@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import dynamic from "next/dynamic";
+import "leaflet/dist/leaflet.css";
 
-// ✅ Dynamically import leaflet components (client-only)
+// ✅ Dynamic imports (client-only)
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
   { ssr: false }
@@ -23,24 +24,40 @@ const Popup = dynamic(
   { ssr: false }
 );
 
-// ✅ Import Leaflet CSS manually
-import "leaflet/dist/leaflet.css";
-
 const TableXchire = ({ data }: { data: any[] }) => {
+  const [L, setL] = useState<any>(null); // Leaflet instance
   const [selectedLocation, setSelectedLocation] = useState<{
     lat: number;
     lng: number;
     address: string;
   } | null>(null);
 
+  // ✅ Load Leaflet only in browser
+  useEffect(() => {
+    (async () => {
+      const leaflet = await import("leaflet");
+      delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
+      leaflet.Icon.Default.mergeOptions({
+        iconRetinaUrl:
+          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+        iconUrl:
+          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+        shadowUrl:
+          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+      });
+      setL(leaflet);
+    })();
+  }, []);
+
+  // ✅ Export to Excel
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Session Logs");
 
     worksheet.columns = [
-      { header: "Status", key: "status", width: 20 },
-      { header: "Email", key: "email", width: 30 },
-      { header: "Department", key: "department", width: 25 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "Email", key: "email", width: 25 },
+      { header: "Department", key: "department", width: 20 },
       { header: "Timestamp", key: "timestamp", width: 25 },
       { header: "IP Address", key: "ipAddress", width: 20 },
       { header: "User Agent", key: "userAgent", width: 40 },
@@ -49,21 +66,14 @@ const TableXchire = ({ data }: { data: any[] }) => {
       { header: "Longitude", key: "longitude", width: 15 },
     ];
 
-    data.forEach((item) => {
+    data.forEach((item) =>
       worksheet.addRow({
-        status: item.status || "N/A",
-        email: item.email,
-        department: item.department,
+        ...item,
         timestamp: item.timestamp
           ? new Date(item.timestamp).toLocaleString()
           : "N/A",
-        ipAddress: item.ipAddress || "N/A",
-        userAgent: item.userAgent || "N/A",
-        deviceId: item.deviceId || "N/A",
-        latitude: item.latitude || "N/A",
-        longitude: item.longitude || "N/A",
-      });
-    });
+      })
+    );
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(
@@ -99,79 +109,129 @@ const TableXchire = ({ data }: { data: any[] }) => {
 
   return (
     <div className="overflow-x-auto relative">
-      <div className="flex justify-end mb-2">
+      <div className="flex justify-end mb-3">
         <button
           onClick={exportToExcel}
-          className="border text-black px-4 py-2 rounded text-xs flex shadow-md"
+          className="border text-black px-4 py-2 rounded text-xs flex shadow-md hover:bg-gray-100"
         >
           Export to Excel
         </button>
       </div>
 
-      <table className="min-w-full table-auto border border-gray-200 text-xs">
-        <thead className="bg-gray-200 sticky top-0 z-10">
-          <tr className="text-left border-l-4 border-orange-400">
-            <th className="px-4 py-2">Status</th>
-            <th className="px-4 py-2">Email</th>
-            <th className="px-4 py-2">Department</th>
-            <th className="px-4 py-2">Timestamp</th>
-            <th className="px-4 py-2">IP Address</th>
-            <th className="px-4 py-2">User Agent</th>
-            <th className="px-4 py-2">Device ID</th>
-            <th className="px-4 py-2">Location</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.length ? (
-            data.map((post) => (
-              <tr key={post._id} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-2">
-                  <span
-                    className={`text-white px-2 py-1 rounded ${statusColors[post.status] || "bg-gray-400"}`}
-                  >
-                    {post.status}
-                  </span>
+      {/* ✅ TABLE for Desktop */}
+      <div className="hidden md:block">
+        <table className="min-w-full table-auto">
+          <thead className="bg-gray-100">
+            <tr className="text-xs text-left whitespace-nowrap border-l-4 border-orange-400">
+              <th className="px-6 py-4 font-semibold text-gray-700">Status</th>
+              <th className="px-6 py-4 font-semibold text-gray-700">User Info</th>
+              <th className="px-6 py-4 font-semibold text-gray-700">Timestamp</th>
+              <th className="px-6 py-4 font-semibold text-gray-700">IP Address</th>
+              <th className="px-6 py-4 font-semibold text-gray-700">User Agent</th>
+              <th className="px-6 py-4 font-semibold text-gray-700">Device ID</th>
+              <th className="px-6 py-4 font-semibold text-gray-700">Location</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {data.length ? (
+              data.map((post) => (
+                <tr key={post._id} className="border-t hover:bg-gray-50">
+                  <td className="px-6 py-4 text-xs">
+                    <span
+                      className={`text-white px-4 py-2 rounded-full capitalize ${statusColors[post.status] || "bg-gray-400"}`}
+                    >
+                      {post.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs">{post.email}<br />{post.department}</td>
+                  <td className="px-6 py-4 text-xs">
+                    {post.timestamp
+                      ? new Date(post.timestamp).toLocaleString()
+                      : "N/A"}
+                  </td>
+                  <td className="px-6 py-4 text-xs">{post.ipAddress || "N/A"}</td>
+                  <td className="px-6 py-4 text-xs break-all max-w-xs">
+                    {post.userAgent || "N/A"}
+                  </td>
+                  <td className="px-6 py-4 text-xs">{post.deviceId || "N/A"}</td>
+                  <td className="px-6 py-4 text-xs">
+                    {post.latitude && post.longitude ? (
+                      <button
+                        onClick={() =>
+                          handleViewLocation(post.latitude, post.longitude)
+                        }
+                        className="text-blue-600 underline"
+                      >
+                        View Location
+                      </button>
+                    ) : (
+                      "N/A"
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="text-center py-4 text-gray-500">
+                  No session logs available
                 </td>
-                <td className="px-4 py-2">{post.email}</td>
-                <td className="px-4 py-2">{post.department}</td>
-                <td className="px-4 py-2">
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ✅ CARD View for Mobile */}
+      <div className="block md:hidden space-y-3">
+        {data.length ? (
+          data.map((post) => (
+            <div
+              key={post._id}
+              className="border rounded-lg p-3 shadow-sm bg-white"
+            >
+              <div className="flex justify-between mb-2">
+                <span
+                  className={`text-white text-[10px] px-2 py-1 rounded ${statusColors[post.status] || "bg-gray-400"}`}
+                >
+                  {post.status}
+                </span>
+                <small className="text-gray-500">
                   {post.timestamp
                     ? new Date(post.timestamp).toLocaleString()
                     : "N/A"}
-                </td>
-                <td className="px-4 py-2">{post.ipAddress || "N/A"}</td>
-                <td className="px-4 py-2 break-all max-w-xs">
-                  {post.userAgent || "N/A"}
-                </td>
-                <td className="px-4 py-2">{post.deviceId || "N/A"}</td>
-                <td className="px-4 py-2">
-                  {post.latitude && post.longitude ? (
-                    <button
-                      onClick={() =>
-                        handleViewLocation(post.latitude, post.longitude)
-                      }
-                      className="text-blue-600 underline"
-                    >
-                      View Location
-                    </button>
-                  ) : (
-                    "N/A"
-                  )}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={8} className="text-center py-4 text-gray-500">
-                No session logs available
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+                </small>
+              </div>
+              <div className="text-xs">
+                <p><strong>Email:</strong> {post.email}</p>
+                <p><strong>Dept:</strong> {post.department}</p>
+                <p><strong>IP:</strong> {post.ipAddress || "N/A"}</p>
+                <p><strong>Device:</strong> {post.deviceId || "N/A"}</p>
+                <p className="break-all">
+                  <strong>UserAgent:</strong> {post.userAgent || "N/A"}
+                </p>
+                {post.latitude && post.longitude && (
+                  <button
+                    onClick={() =>
+                      handleViewLocation(post.latitude, post.longitude)
+                    }
+                    className="mt-2 text-blue-600 underline"
+                  >
+                    View Location
+                  </button>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className="text-center text-gray-500 text-sm">
+            No session logs available
+          </p>
+        )}
+      </div>
 
-      {selectedLocation && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+      {/* ✅ MAP MODAL */}
+      {selectedLocation && L && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[999]">
           <div className="bg-white rounded-lg shadow-lg p-4 w-[90%] max-w-2xl relative">
             <button
               onClick={() => setSelectedLocation(null)}
