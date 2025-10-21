@@ -14,7 +14,7 @@ interface Post {
   manager: string;
   status: string;
   remarks: string;
-  followup_date: string;
+  next_available_date: string;
   date_created: string;
   date_updated: string;
 }
@@ -155,7 +155,7 @@ const TableXchire: React.FC<TableXchireProps> = ({
                     </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-xs">{post.followup_date}</td>
+                <td className="px-6 py-4 text-xs">{post.next_available_date}</td>
               </tr>
             );
           })
