@@ -95,7 +95,8 @@ const TableXchire: React.FC<TableXchireProps> = ({
             </td>
           ))}
           <td className="px-6 py-4 text-xs">
-            <strong>{post.referenceid}</strong> | {post.tsm}
+            <strong>{post.referenceid}</strong> | {post.tsm} <br />
+            {post.manager}
           </td>
           <td className="px-6 py-4 text-xs align-top">
             <div className="flex flex-col gap-1">

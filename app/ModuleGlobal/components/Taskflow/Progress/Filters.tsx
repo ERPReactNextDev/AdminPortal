@@ -86,6 +86,10 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
         <option value="Warm">Warm</option>
         <option value="Hot">Hot</option>
         <option value="Done">Done</option>
+        <option value="Assisted">Assisted</option>
+        <option value="Quote-Done">Quote-Done</option>
+        <option value="SO-Done">SO-Done</option>
+        <option value="Delivered">Delivered</option>
         <option value="Cancelled">Cancelled</option>
         <option value="Loss">Loss</option>
       </select>

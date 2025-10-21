@@ -47,7 +47,7 @@ const ListofUser: React.FC = () => {
     const [filterTSA, setFilterTSA] = useState<string>("");
     const [tsaList, setTsaList] = useState<any[]>([]);
     const [selectedStatus, setSelectedStatus] = useState<string>("");
-    
+
     // Fetch user data based on query parameters (user ID)
     useEffect(() => {
         const fetchUserData = async () => {
@@ -189,32 +189,34 @@ const ListofUser: React.FC = () => {
     // Filter users by search term (firstname, lastname)
     const filteredAccounts = Array.isArray(posts)
         ? posts.filter((post) => {
-            // ✅ Check if the company name or status matches the search term
-            const matchesSearchTerm =
-                post?.companyname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                post?.referenceid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                post?.activitystatus?.toLowerCase().includes(searchTerm.toLowerCase());
+            // ✅ Convert search term to lowercase once
+            const term = searchTerm.toLowerCase();
 
-            // ✅ Parse the date_created field
+            // ✅ Check kung kahit anong field sa post ay nagma-match sa search term
+            const matchesSearchTerm = Object.values(post || {}).some((value) =>
+                typeof value === "string" && value.toLowerCase().includes(term)
+            );
+
+            // ✅ Parse date_created
             const postDate = post.date_created ? new Date(post.date_created) : null;
 
-            // ✅ Check if the post's date is within the selected date range
+            // ✅ Check kung pasok sa date range
             const isWithinDateRange =
                 (!startDate || (postDate && postDate >= new Date(startDate))) &&
                 (!endDate || (postDate && postDate <= new Date(endDate)));
 
-            // ✅ Check if the post matches the selected client type
+            // ✅ Check kung tugma sa typeclient
             const matchesClientType = selectedClientType
                 ? post?.typeclient === selectedClientType
                 : true;
 
-            // ✅ Check if the post matches the selected status
+            // ✅ Check kung tugma sa status
             const matchesStatus = selectedStatus ? post?.activitystatus === selectedStatus : true;
 
-            // ✅ Check if the post matches the selected TSA
+            // ✅ Check kung tugma sa TSA
             const matchesTSA = filterTSA ? post?.referenceid === filterTSA : true;
 
-            // ✅ Return the filtered result
+            // ✅ Return final filtered result
             return (
                 matchesSearchTerm &&
                 isWithinDateRange &&
@@ -224,6 +226,7 @@ const ListofUser: React.FC = () => {
             );
         })
         : [];
+
 
     const indexOfLastPost = currentPage * postsPerPage;
     const indexOfFirstPost = indexOfLastPost - postsPerPage;

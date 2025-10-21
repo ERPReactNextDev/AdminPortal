@@ -65,11 +65,11 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
             const response = await fetch(`/api/ModuleSales/UserManagement/CompanyAccounts/Bulk-Edit`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userIds: Array.from(selectedUsers), status: newStatus }),
+                body: JSON.stringify({ userIds: Array.from(selectedUsers), targetquota: newStatus }),
             });
             if (response.ok) {
                 setUpdatedUser((prev) => prev.map((user) =>
-                    selectedUsers.has(user.id) ? { ...user, status: newStatus } : user
+                    selectedUsers.has(user.id) ? { ...user, targetquota: newStatus } : user
                 ));
                 setSelectedUsers(new Set());
                 setBulkEditMode(false);

@@ -107,7 +107,8 @@ const TableXchire: React.FC<TableXchireProps> = React.memo(
           <td className="px-6 py-4 text-xs">{post.inquiries}</td>
           <td className="px-6 py-4 text-xs">{post.csragent}</td>
           <td className="px-6 py-4 text-xs">
-            <strong>{post.referenceid}</strong> | {post.tsm}
+            <strong>{post.referenceid}</strong> | {post.tsm} <br />
+            {post.manager}
           </td>
           <td className="px-6 py-4 text-xs">{post.targetquota}</td>
           <td className="px-6 py-4 text-xs align-top">

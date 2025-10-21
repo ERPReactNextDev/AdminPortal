@@ -22,7 +22,13 @@ const UsersCard: React.FC<UsersCardProps> = ({ posts, handleEdit }) => {
   const [selectedTsa, setSelectedTsa] = useState("");
   const [newTypeClient, setNewTypeClient] = useState("");
   const [newStatus, setNewStatus] = useState("");
-
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [duplicateCount, setDuplicateCount] = useState(0); // ✅ NEW STATE
+  
+  // ✅ Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  
   useEffect(() => {
     setUpdatedUser(posts);
   }, [posts]);
@@ -233,8 +239,70 @@ const UsersCard: React.FC<UsersCardProps> = ({ posts, handleEdit }) => {
     return `${formattedDateStr} ${hours}:${minutesStr} ${ampm}`;
   };
 
+  // ✅ FIND DUPLICATE HANDLER
+  const handleFindDuplicates = useCallback(() => {
+    if (!Array.isArray(posts) || posts.length === 0) return;
+
+    const duplicates = posts.filter((post, index, arr) => {
+      return arr.some(
+        (other, i) =>
+          i !== index &&
+          other.companyname?.toLowerCase() === post.companyname?.toLowerCase()
+      );
+    });
+
+    if (duplicates.length > 0) {
+      setUpdatedUser(duplicates);
+      setShowDuplicates(true);
+      setDuplicateCount(duplicates.length); // ✅ store count
+    } else {
+      alert("✅ No duplicate company names with the same reference ID found.");
+      setShowDuplicates(false);
+      setUpdatedUser(posts);
+      setDuplicateCount(0);
+    }
+  }, [posts]);
+
+  const handleShowAll = useCallback(() => {
+    setUpdatedUser(posts);
+    setShowDuplicates(false);
+    setDuplicateCount(0);
+  }, [posts]);
+
   return (
     <div className="mb-4 overflow-x-auto">
+      <div className="flex justify-between items-center mb-3">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-700">
+            {showDuplicates ? "Duplicate Entries" : "All Users"}
+          </h2>
+
+          {/* ✅ Show duplicate count if applicable */}
+          {showDuplicates && (
+            <p className="text-sm text-red-600 font-medium mt-1">
+              ⚠️ Found {duplicateCount} duplicate record{duplicateCount !== 1 ? "s" : ""}.
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-2">
+          {!showDuplicates ? (
+            <button
+              onClick={handleFindDuplicates}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs px-4 py-2 rounded-lg shadow-md transition"
+            >
+              🔍 Find Duplicates
+            </button>
+          ) : (
+            <button
+              onClick={handleShowAll}
+              className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 text-xs rounded-lg shadow-md transition"
+            >
+              🔙 Show All
+            </button>
+          )}
+        </div>
+      </div>
       {/* Bulk Action Buttons */}
       <ButtonActions
         bulkDeleteMode={bulkDeleteMode}

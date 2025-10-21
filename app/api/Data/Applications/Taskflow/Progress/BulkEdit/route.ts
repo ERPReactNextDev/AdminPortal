@@ -1,48 +1,53 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 
-const Xchire_databaseUrl = process.env.TASKFLOW_DB_URL;
-if (!Xchire_databaseUrl) {
-    throw new Error("TASKFLOW_DB_URL is not set in the environment variables.");
+const databaseUrl = process.env.TASKFLOW_DB_URL;
+if (!databaseUrl) {
+  throw new Error("TASKFLOW_DB_URL is not set in the environment variables.");
 }
 
-const Xchire_sql = neon(Xchire_databaseUrl);
+const sql = neon(databaseUrl);
 
-async function bulkupdate(userIds: string[], targetquota: string) {
-    try {
-        if (!userIds || userIds.length === 0 || !targetquota) {
-            throw new Error("User IDs and typeclient are required.");
-        }
-
-        const Xchire_update = await Xchire_sql`
-            UPDATE progress
-            SET 
-                targetquota = ${targetquota},
-                date_updated = CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Manila'
-            WHERE id = ANY(${userIds})
-            RETURNING *;
-        `;
-
-        return { success: true, data: Xchire_update };
-    } catch (Xchire_error: any) {
-        console.error("Error updating users:", Xchire_error);
-        return { success: false, error: Xchire_error.message || "Failed to update users." };
+async function bulkUpdate(userIds: string[], targetquota: string) {
+  try {
+    if (!userIds?.length || !targetquota) {
+      throw new Error("User IDs and TSM are required.");
     }
+
+    const updatedRows = await sql`
+      UPDATE progress
+      SET targetquota = ${targetquota}
+      WHERE id = ANY(${userIds})
+      RETURNING *;
+    `;
+
+    return { success: true, data: updatedRows };
+  } catch (error: any) {
+    console.error("Error updating users:", error);
+    return { success: false, error: error.message || "Failed to update users." };
+  }
 }
 
 export async function PUT(req: Request) {
-    try {
-        const Xchire_body = await req.json();
-        const { userIds, targetquota } = Xchire_body;
+  try {
+    const body = await req.json();
+    const { userIds, targetquota } = body;
 
-        const Xchire_result = await bulkupdate(userIds, targetquota);
-
-        return NextResponse.json(Xchire_result);
-    } catch (Xchire_error: any) {
-        console.error("Error in PUT /api/ModuleSales/UserManagement/CompanyAccounts/Bulk-Edit:", Xchire_error);
-        return NextResponse.json(
-            { success: false, error: Xchire_error.message || "Internal server error" },
-            { status: 500 }
-        );
+    if (!userIds || !targetquota) {
+      return NextResponse.json(
+        { success: false, error: "Missing userIds or tsm." },
+        { status: 400 }
+      );
     }
+
+    const result = await bulkUpdate(userIds, targetquota);
+
+    return NextResponse.json(result);
+  } catch (error: any) {
+    console.error("Error in PUT /api/ModuleSales/UserManagement/CompanyAccounts/Bulk-Edit:", error);
+    return NextResponse.json(
+      { success: false, error: error.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

@@ -61,7 +61,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
         <select
           value={selectedClientType}
           onChange={(e) => setSelectedClientType(e.target.value)}
-          className="shadow-sm border px-3 py-2 rounded text-xs w-full md:w-auto"
+          className="shadow-sm border px-3 py-2 rounded text-xs w-full md:w-auto uppercase"
         >
           <option value="">All Client Types</option>
           <option value="null">No Data</option>
@@ -79,7 +79,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
         <select
           value={selectedStatus}
           onChange={(e) => setSelectedStatus(e.target.value)}
-          className="shadow-sm border px-3 py-2 rounded text-xs w-full md:w-auto"
+          className="shadow-sm border px-3 py-2 rounded text-xs w-full md:w-auto uppercase"
         >
           <option value="">All Status</option>
           <option value="Active">Active</option>
@@ -94,7 +94,7 @@ const SearchFilters: React.FC<SearchFiltersProps> = ({
         <select
           value={filterTSA}
           onChange={(e) => setFilterTSA(e.target.value)}
-          className="shadow-sm border px-3 py-2 rounded text-xs w-full md:w-auto"
+          className="shadow-sm border px-3 py-2 rounded text-xs w-full md:w-auto uppercase"
         >
           <option value="">All TSAs</option>
           {tsaList

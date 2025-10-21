@@ -22,8 +22,8 @@ interface SubMainProps {
   handleBulkDelete: () => void;
   handleBulkEdit: () => void;
   handleSelectAll: () => void;
-  newTargetQuota: string;
-  setNewTargetQuota: (val: string) => void;
+  newTSM: string;
+  setNewTSM: (val: string) => void;
   totalQuotation: number;
   totalSOAmount: number;
   totalActualSales: number;
@@ -45,8 +45,8 @@ const SubMain: React.FC<SubMainProps> = ({
   handleBulkDelete,
   handleBulkEdit,
   handleSelectAll,
-  newTargetQuota,
-  setNewTargetQuota,
+  newTSM,
+  setNewTSM,
   totalQuotation,
   totalSOAmount,
   totalActualSales,
@@ -63,8 +63,8 @@ const SubMain: React.FC<SubMainProps> = ({
         handleSelectAll={handleSelectAll}
         handleBulkDelete={handleBulkDelete}
         handleBulkEdit={handleBulkEdit}
-        newTargetQuota={newTargetQuota}
-        setNewTargetQuota={setNewTargetQuota}
+        newTSM={newTSM}
+        setNewTSM={setNewTSM}
       />
 
       <div className="flex space-x-2 mb-4 text-[10px]">

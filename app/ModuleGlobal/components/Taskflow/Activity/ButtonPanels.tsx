@@ -64,7 +64,7 @@ const ButtonActions: React.FC<Props> = ({
                             </button>
                         )}
 
-                        {bulkEditMode && (
+                        {/*{bulkEditMode && (
                             <div className="flex items-center gap-2">
                                 <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="px-2 py-1 border rounded-md">
                                     <option value="">Select Status</option>
@@ -72,6 +72,13 @@ const ButtonActions: React.FC<Props> = ({
                                     <option value="Done">Done</option>
                                     <option value="Delivered">Delivered</option>
                                 </select>
+                                <button onClick={handleBulkEdit} className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs" disabled={!newStatus}>Apply Changes</button>
+                            </div>
+                        )}*/}
+
+                        {bulkEditMode && (
+                            <div className="flex items-center gap-2">
+                                <input value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="px-2 py-1 border rounded-md" />
                                 <button onClick={handleBulkEdit} className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-xs" disabled={!newStatus}>Apply Changes</button>
                             </div>
                         )}

@@ -11,7 +11,7 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
     const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
     const [bulkEditMode, setBulkEditMode] = useState(false);
     const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
-    const [newTargetQuota, setNewTargetQuota] = useState("");
+    const [newTSM, setNewTSM] = useState("");
     const [activeTab, setActiveTab] = useState("table");
 
     useEffect(() => {
@@ -26,7 +26,7 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
     const toggleBulkEditMode = useCallback(() => {
         setBulkEditMode((prev) => !prev);
         setSelectedUsers(new Set());
-        setNewTargetQuota("");
+        setNewTSM("");
     }, []);
 
     const handleSelectUser = useCallback((userId: string) => {
@@ -60,16 +60,16 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
     }, [selectedUsers]);
 
     const handleBulkEdit = useCallback(async () => {
-        if (selectedUsers.size === 0 || !newTargetQuota) return;
+        if (selectedUsers.size === 0 || !newTSM) return;
         try {
             const response = await fetch(`/api/Data/Applications/Taskflow/Progress/BulkEdit`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userIds: Array.from(selectedUsers), targetquota: newTargetQuota }),
+                body: JSON.stringify({ userIds: Array.from(selectedUsers), targetquota: newTSM }),
             });
             if (response.ok) {
                 setUpdatedUser((prev) => prev.map((user) =>
-                    selectedUsers.has(user.id) ? { ...user, targetquota: newTargetQuota } : user
+                    selectedUsers.has(user.id) ? { ...user, targetquota: newTSM } : user
                 ));
                 setSelectedUsers(new Set());
                 setBulkEditMode(false);
@@ -79,7 +79,7 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
         } catch (error) {
             console.error("Error updating users:", error);
         }
-    }, [selectedUsers, newTargetQuota]);
+    }, [selectedUsers, newTSM]);
 
     const handleSelectAll = useCallback(() => {
         if (selectedUsers.size === updatedUser.length) {
@@ -173,8 +173,8 @@ const Main: React.FC<MainProps> = ({ posts, handleEdit }) => {
             handleBulkDelete={handleBulkDelete}
             handleBulkEdit={handleBulkEdit}
             handleSelectAll={handleSelectAll}
-            newTargetQuota={newTargetQuota}
-            setNewTargetQuota={setNewTargetQuota}
+            newTSM={newTSM}
+            setNewTSM={setNewTSM}
             totalQuotation={totalQuotation}
             totalSOAmount={totalSOAmount}
             totalActualSales={totalActualSales}
