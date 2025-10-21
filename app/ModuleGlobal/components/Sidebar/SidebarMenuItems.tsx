@@ -23,18 +23,6 @@ const getMenuItems = (
       ],
     },
     {
-      title: 'IT Systems & Operations',
-      icon: FcCommandLine,
-      subItems: [
-        { title: 'Asset Inventory', href: `/ModuleGlobal/ERP/IT/Assets/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
-        { title: 'Employee Monitoring', href: `/ModuleGlobal/ERP/Links/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
-        { title: 'Network Performance', href: `/ModuleGlobal/ERP/Links/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
-        { title: 'Network Credentials', href: `/ModuleGlobal/ERP/Links/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
-        { title: 'PRS & Transmittals', href: `/ModuleGlobal/ERP/Links/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
-        { title: 'System Credentials', href: `/ModuleGlobal/ERP/Links/${userId ? `?id=${encodeURIComponent(userId)}` : ''}` },
-      ],
-    },
-    {
       title: 'User Accounts',
       icon: FcManager,
       subItems: [
