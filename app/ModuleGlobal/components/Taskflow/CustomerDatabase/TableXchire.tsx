@@ -155,7 +155,7 @@ const TableXchire: React.FC<TableXchireProps> = ({
                     </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-xs">{formatDate(new Date(post.followup_date).getTime())}</td>
+                <td className="px-6 py-4 text-xs">{post.followup_date}</td>
               </tr>
             );
           })
