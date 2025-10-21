@@ -263,10 +263,6 @@ const UsersCard: React.FC<UsersCardProps> = ({
         <>
           <TableXchire
             data={paginatedData}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-            Role={Role}
-            Department={Department}
           />
 
           {/* Pagination Controls */}
