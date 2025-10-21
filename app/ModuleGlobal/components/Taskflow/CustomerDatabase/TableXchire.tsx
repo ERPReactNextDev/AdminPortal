@@ -14,6 +14,7 @@ interface Post {
   manager: string;
   status: string;
   remarks: string;
+  followup_date: string;
   date_created: string;
   date_updated: string;
 }
@@ -62,6 +63,7 @@ const TableXchire: React.FC<TableXchireProps> = ({
           <th className="px-6 py-4 font-semibold text-gray-700">TSA | TSM</th>
           <th className="px-6 py-4 font-semibold text-gray-700">Remarks</th>
           <th className="px-6 py-4 font-semibold text-gray-700">Date</th>
+          <th className="px-6 py-4 font-semibold text-gray-700">Follow Up Date</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
@@ -153,6 +155,7 @@ const TableXchire: React.FC<TableXchireProps> = ({
                     </span>
                   </div>
                 </td>
+                <td className="px-6 py-4 text-xs">{formatDate(new Date(post.followup_date).getTime())}</td>
               </tr>
             );
           })
