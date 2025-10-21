@@ -1,8 +1,11 @@
-import React, { useState } from "react";
+"use client";
+import React, { useState, useEffect } from "react";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import dynamic from "next/dynamic";
+import "leaflet/dist/leaflet.css"; // ✅ Import Leaflet CSS globally
 
+// ✅ Dynamic imports for Leaflet components
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
   { ssr: false }
@@ -20,6 +23,17 @@ const Popup = dynamic(
   { ssr: false }
 );
 
+import L from "leaflet";
+
+// ✅ Fix missing marker icons in Next.js builds
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
 interface TableXchireProps {
   data: any[];
   handleEdit?: (post: any) => void;
@@ -34,6 +48,19 @@ const TableXchire: React.FC<TableXchireProps> = ({ data }) => {
     lng: number;
     address: string;
   } | null>(null);
+
+  const [isMapReady, setIsMapReady] = useState(false);
+
+  // ✅ Ensure map recalculates size after modal opens
+  useEffect(() => {
+    if (selectedLocation) {
+      setTimeout(() => {
+        setIsMapReady(true);
+      }, 200); // small delay so map can mount correctly
+    } else {
+      setIsMapReady(false);
+    }
+  }, [selectedLocation]);
 
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
@@ -79,7 +106,6 @@ const TableXchire: React.FC<TableXchireProps> = ({ data }) => {
     logout: "bg-red-600",
   };
 
-  // ✅ Convert Lat/Lng → Address (reverse geocode)
   const getAddressFromCoords = async (lat: number, lng: number) => {
     try {
       const res = await fetch(
@@ -108,17 +134,17 @@ const TableXchire: React.FC<TableXchireProps> = ({ data }) => {
         </button>
       </div>
 
-      <table className="min-w-full table-auto border border-gray-200">
-        <thead className="bg-gray-200 sticky top-0 z-10 text-xs">
-          <tr className="text-left border-l-4 border-orange-400">
-            <th className="px-4 py-2">Status</th>
-            <th className="px-4 py-2">Email</th>
-            <th className="px-4 py-2">Department</th>
-            <th className="px-4 py-2">Timestamp</th>
-            <th className="px-4 py-2">IP Address</th>
-            <th className="px-4 py-2">User Agent</th>
-            <th className="px-4 py-2">Device ID</th>
-            <th className="px-4 py-2">Location</th>
+      <table className="min-w-full table-auto">
+        <thead className="bg-gray-100">
+          <tr className="text-xs text-left whitespace-nowrap border-l-4 border-orange-400">
+            <th className="px-6 py-4 font-semibold text-gray-700">Status</th>
+            <th className="px-6 py-4 font-semibold text-gray-700">Email</th>
+            <th className="px-6 py-4 font-semibold text-gray-700">Department</th>
+            <th className="px-6 py-4 font-semibold text-gray-700">Timestamp</th>
+            <th className="px-6 py-4 font-semibold text-gray-700">IP Address</th>
+            <th className="px-6 py-4 font-semibold text-gray-700">User Agent</th>
+            <th className="px-6 py-4 font-semibold text-gray-700">Device ID</th>
+            <th className="px-6 py-4 font-semibold text-gray-700">Location</th>
           </tr>
         </thead>
         <tbody>
@@ -137,17 +163,17 @@ const TableXchire: React.FC<TableXchireProps> = ({ data }) => {
                     {post.status}
                   </span>
                 </td>
-                <td className="px-4 py-2">{post.email}</td>
-                <td className="px-4 py-2">{post.department}</td>
-                <td className="px-4 py-2">
+                <td className="px-6 py-4 text-xs">{post.email}</td>
+                <td className="px-6 py-4 text-xs">{post.department}</td>
+                <td className="px-6 py-4 text-xs">
                   {post.timestamp
                     ? new Date(post.timestamp).toLocaleString()
                     : "N/A"}
                 </td>
-                <td className="px-4 py-2">{post.ipAddress || "N/A"}</td>
-                <td className="px-4 py-2">{post.userAgent || "N/A"}</td>
-                <td className="px-4 py-2">{post.deviceId || "N/A"}</td>
-                <td className="px-4 py-2">
+                <td className="px-6 py-4 text-xs">{post.ipAddress || "N/A"}</td>
+                <td className="px-6 py-4 text-xs">{post.userAgent || "N/A"}</td>
+                <td className="px-6 py-4 text-xs">{post.deviceId || "N/A"}</td>
+                <td className="px-6 py-4 text-xs">
                   {post.latitude && post.longitude ? (
                     <button
                       onClick={() =>
@@ -190,19 +216,25 @@ const TableXchire: React.FC<TableXchireProps> = ({ data }) => {
               📍 {selectedLocation.address}
             </h3>
             <div className="h-72 w-full rounded-lg overflow-hidden">
-              <MapContainer
-                center={[selectedLocation.lat, selectedLocation.lng]}
-                zoom={15}
-                className="h-full w-full z-10"
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution="© OpenStreetMap contributors"
-                />
-                <Marker position={[selectedLocation.lat, selectedLocation.lng]}>
-                  <Popup>{selectedLocation.address}</Popup>
-                </Marker>
-              </MapContainer>
+              {isMapReady && (
+                <MapContainer
+                  key={`${selectedLocation.lat}-${selectedLocation.lng}`}
+                  center={[selectedLocation.lat, selectedLocation.lng]}
+                  zoom={15}
+                  scrollWheelZoom={false}
+                  className="h-full w-full z-10"
+                >
+                  <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution="© OpenStreetMap contributors"
+                  />
+                  <Marker
+                    position={[selectedLocation.lat, selectedLocation.lng]}
+                  >
+                    <Popup>{selectedLocation.address}</Popup>
+                  </Marker>
+                </MapContainer>
+              )}
             </div>
           </div>
         </div>
