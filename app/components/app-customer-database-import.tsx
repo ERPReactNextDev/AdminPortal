@@ -1,0 +1,240 @@
+"use client"
+
+import React, { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import {
+    Dialog,
+    DialogTrigger,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+    DialogClose,
+} from "@/components/ui/dialog"
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import * as ExcelJS from "exceljs"
+import { toast } from "sonner"
+import { Upload as UploadIcon } from "lucide-react"
+
+interface Option {
+    value: string
+    label: string
+}
+
+export function ImportDialog() {
+    const [file, setFile] = useState<File | null>(null)
+    const [isLoading, setIsLoading] = useState(false)
+    const [previewData, setPreviewData] = useState<any[]>([])
+
+    const [managerOptions, setManagerOptions] = useState<Option[]>([])
+    const [tsmOptions, setTsmOptions] = useState<Option[]>([])
+    const [tsaOptions, setTsaOptions] = useState<Option[]>([])
+
+    const [selectedManager, setSelectedManager] = useState<Option | null>(null)
+    const [selectedTSM, setSelectedTSM] = useState<Option | null>(null)
+    const [selectedTSA, setSelectedTSA] = useState<Option | null>(null)
+
+    useEffect(() => {
+        fetch("/api/UserManagement/FetchManager?Role=Manager")
+            .then((res) => res.json())
+            .then((data) => setManagerOptions(data.map((u: any) => ({ value: u.ReferenceID, label: `${u.Firstname} ${u.Lastname}` }))))
+            .catch((err) => console.error("Error fetching managers:", err))
+    }, [])
+
+    useEffect(() => {
+        fetch("/api/UserManagement/FetchTSM?Role=Territory Sales Manager")
+            .then((res) => res.json())
+            .then((data) => setTsmOptions(data.map((u: any) => ({ value: u.ReferenceID, label: `${u.Firstname} ${u.Lastname}` }))))
+            .catch((err) => console.error("Error fetching TSM:", err))
+    }, [])
+
+    useEffect(() => {
+        fetch("/api/UserManagement/FetchTSA?Role=Territory Sales Associate")
+            .then((res) => res.json())
+            .then((data) => setTsaOptions(data.map((u: any) => ({ value: u.ReferenceID, label: `${u.Firstname} ${u.Lastname}` }))))
+            .catch((err) => console.error("Error fetching TSA:", err))
+    }, [])
+
+    const parseExcel = async (file: File) => {
+        const reader = new FileReader()
+        return new Promise<any[]>((resolve, reject) => {
+            reader.onload = async (event) => {
+                try {
+                    const data = event.target?.result as ArrayBuffer
+                    const workbook = new ExcelJS.Workbook()
+                    await workbook.xlsx.load(data)
+                    const worksheet = workbook.worksheets[0]
+                    const parsed: any[] = []
+
+                    worksheet.eachRow((row, rowNumber) => {
+                        if (rowNumber === 1) return // Skip header
+                        parsed.push({
+                            referenceid: selectedTSA?.value || "",
+                            manager: selectedManager?.value || "",
+                            tsm: selectedTSM?.value || "",
+                            tsa: selectedTSA?.value || "",
+                            companyname: row.getCell(1).value || "",
+                            contactperson: row.getCell(2).value || "",
+                            contactnumber: row.getCell(3).value || "",
+                            emailaddress: row.getCell(4).value || "",
+                            typeclient: row.getCell(5).value || "",
+                            address: row.getCell(6).value || "",
+                            deliveryaddress: row.getCell(7).value || "",
+                            area: row.getCell(8).value || "",
+                            industry: row.getCell(9).value || "",
+                            status: row.getCell(10).value || "",
+                        })
+                    })
+
+                    resolve(parsed)
+                } catch (err) {
+                    reject(err)
+                }
+            }
+            reader.readAsArrayBuffer(file)
+        })
+    }
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0]
+        if (!selectedFile) return
+        setFile(selectedFile)
+        parseExcel(selectedFile).then(setPreviewData).catch(() => toast.error("Failed to parse Excel file."))
+    }
+
+    const handleUpload = async () => {
+        if (!file) return toast.error("Please select a file.")
+        if (!selectedTSA) return toast.error("Please select a TSA.")
+
+        setIsLoading(true)
+        try {
+            const parsed = await parseExcel(file)
+            const total = parsed.length
+            const batchSize = 10 // adjust batch size as needed
+
+            for (let i = 0; i < total; i += batchSize) {
+                const batch = parsed.slice(i, i + batchSize)
+
+                // Show toast with count and first company in the batch
+                toast(`Uploading ${i + 1}-${Math.min(i + batchSize, total)}/${total}: ${batch[0].companyname}`, { duration: 1000 })
+
+                await fetch("/api/Data/Applications/Taskflow/CustomerDatabase/Import", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        referenceid: selectedTSA.value,
+                        tsm: selectedTSM?.value || "",
+                        data: batch,
+                    }),
+                })
+            }
+
+            toast.success(`Successfully imported ${total} records.`)
+            setFile(null)
+            setPreviewData([])
+        } catch (err) {
+            console.error(err)
+            toast.error("Failed to import file.")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                    <UploadIcon className="w-4 h-4" /> Upload
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-5xl">
+                <DialogHeader>
+                    <DialogTitle>Import Customers</DialogTitle>
+                    <DialogDescription>Upload an Excel file to import customer data.</DialogDescription>
+                </DialogHeader>
+
+                <div className="grid gap-4">
+                    {/* Manager / TSM / TSA selects */}
+                    <div className="flex gap-2">
+                        <Select value={selectedManager?.value || ""} onValueChange={(v) => setSelectedManager(managerOptions.find(m => m.value === v) || null)}>
+                            <SelectTrigger><SelectValue placeholder="Select Manager" /></SelectTrigger>
+                            <SelectContent>{managerOptions.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                        </Select>
+
+                        <Select value={selectedTSM?.value || ""} onValueChange={(v) => setSelectedTSM(tsmOptions.find(t => t.value === v) || null)}>
+                            <SelectTrigger><SelectValue placeholder="Select TSM" /></SelectTrigger>
+                            <SelectContent>{tsmOptions.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                        </Select>
+
+                        <Select value={selectedTSA?.value || ""} onValueChange={(v) => setSelectedTSA(tsaOptions.find(t => t.value === v) || null)}>
+                            <SelectTrigger><SelectValue placeholder="Select TSA" /></SelectTrigger>
+                            <SelectContent>{tsaOptions.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* File input */}
+                    <div className="grid gap-2">
+                        <Label>Excel File</Label>
+                        <Input type="file" onChange={handleFileChange} />
+                    </div>
+
+                    {/* Preview Table */}
+                    {previewData.length > 0 && (
+                        <div className="overflow-auto max-h-64 border rounded-md p-2 text-xs">
+                            <Table className="whitespace-nowrap">
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Company</TableHead>
+                                        <TableHead>Contact</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Type of Client</TableHead>
+                                        <TableHead>Address</TableHead>
+                                        <TableHead>Delivery Address</TableHead>
+                                        <TableHead>Area</TableHead>
+                                        <TableHead>Industry</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {previewData.map((row, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="whitespace-normal break-words max-w-[250px]">{row.companyname}</TableCell>
+                                            <TableCell className="whitespace-normal break-words max-w-[250px]">{row.contactperson}</TableCell>
+                                            <TableCell className="whitespace-normal break-words max-w-[250px]">{row.emailaddress}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{row.typeclient}</TableCell>
+                                            <TableCell className="whitespace-normal break-words max-w-[250px]">{row.address}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{row.deliveryaddress}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{row.area}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{row.industry}</TableCell>
+                                            <TableCell className="whitespace-nowrap">{row.status}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    )}
+                </div>
+
+                <DialogFooter className="mt-4 flex justify-end gap-2">
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button onClick={handleUpload} disabled={isLoading} className="flex items-center gap-1">
+                        {isLoading ? "Uploading..." : <><UploadIcon className="w-4 h-4" /> Upload</>}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}

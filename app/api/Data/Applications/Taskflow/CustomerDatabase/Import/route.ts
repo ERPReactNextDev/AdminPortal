@@ -23,12 +23,15 @@ async function create(
     address: string,
     deliveryaddress: string,
     area: string,
-    status: string
+    status: string,
+    industry?: string,
 ) {
     try {
         const Xchire_insert = await Xchire_sql`
-            INSERT INTO accounts (referenceid, manager, tsm, companyname, contactperson, contactnumber, emailaddress, typeclient, address, deliveryaddress, area, status, date_created) 
-            VALUES (${referenceid}, ${manager}, ${tsm}, ${companyname}, ${contactperson}, ${contactnumber}, ${emailaddress}, ${typeclient}, ${address}, ${deliveryaddress}, ${area}, ${status}, NOW()) 
+            INSERT INTO accounts (referenceid, manager, tsm, companyname, contactperson, contactnumber, emailaddress, 
+            typeclient, address, deliveryaddress, area, status, industry, date_created) 
+            VALUES (${referenceid}, ${manager}, ${tsm}, ${companyname}, ${contactperson}, ${contactnumber}, ${emailaddress}, 
+            ${typeclient}, ${address}, ${deliveryaddress}, ${area}, ${status}, ${industry}, NOW()) 
             RETURNING *;
         `;
 
@@ -69,6 +72,7 @@ export async function POST(req: Request) {
                 account.deliveryaddress,
                 account.area,
                 account.status,
+                account.industry // Assuming industry is optional
             );
 
             if (Xchire_result.success) {

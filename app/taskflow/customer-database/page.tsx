@@ -1,0 +1,865 @@
+"use client"
+
+import React, { useEffect, useState, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "../../components/app-sidebar"
+import { Pagination } from "../../components/app-pagination"
+import { Download } from "../../components/app-customer-database-download"
+import { Audit } from "../../components/app-customer-database-audit"
+import { Calendar } from "../../components/app-customer-database-calendar";
+import { ImportDialog } from "../../components/app-customer-database-import"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
+import { BadgeCheck, AlertTriangle, Clock, XCircle, PauseCircle, UserX, UserCheck } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb"
+import { Separator } from "@/components/ui/separator"
+import { Button } from "@/components/ui/button"
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
+import { Input } from "@/components/ui/input"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
+import { Search } from "lucide-react"
+import { DndContext, closestCenter, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core"
+import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { ButtonGroup } from "@/components/ui/button-group"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
+
+interface Customer {
+    id: number
+    companyname: string
+    contactperson: string
+    contactnumber: string
+    emailaddress: string
+    address: string
+    area: string
+    typeclient: string
+    referenceid: string
+    tsm: string
+    manager: string
+    status: string
+    remarks: string
+    date_created: string
+    date_updated: string
+    next_available_date?: string
+}
+
+function DraggableRow({ item, children }: { item: Customer; children: React.ReactNode }) {
+    const { setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.8 : 1,
+    }
+    return (
+        <TableRow ref={setNodeRef} style={style} className="data-[dragging=true]:opacity-75 hover:bg-muted/5">
+            {children}
+        </TableRow>
+    )
+}
+
+export default function AccountPage() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const [userId] = useState<string | null>(searchParams?.get("userId") ?? null)
+    const sensors = useSensors(useSensor(MouseSensor), useSensor(TouchSensor), useSensor(KeyboardSensor))
+
+    const [customers, setCustomers] = useState<Customer[]>([])
+    const [search, setSearch] = useState("")
+    const [filterType, setFilterType] = useState("all")
+    const [filterStatus, setFilterStatus] = useState("all")
+    const [page, setPage] = useState(1)
+    const [rowsPerPage, setRowsPerPage] = useState(20)
+    // 🔹 Audit states
+    const [audited, setAudited] = useState<Customer[]>([])
+    const [isAuditView, setIsAuditView] = useState(false)
+    const [duplicateIds, setDuplicateIds] = useState<Set<number>>(new Set())
+    // 🔍 Audit filter state (for interactive summary)
+    const [auditFilter, setAuditFilter] = useState<"" | "all" | "missingType" | "missingStatus" | "duplicates">("")
+    const [showFilters, setShowFilters] = useState(false)
+    const [isFetching, setIsFetching] = useState(false)
+    const [isFiltering, setIsFiltering] = useState(false)
+    // 🔹 TSA & Date Range filters
+    const [tsaList, setTsaList] = useState<{ value: string; label: string }[]>([])
+    const [filterTSA, setFilterTSA] = useState("all")
+    const [startDate, setStartDate] = useState("")
+    const [endDate, setEndDate] = useState("")
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+    const [selectedIds, setSelectedIdsAction] = useState<Set<number>>(new Set())
+    const [selectAll, setSelectAll] = useState(false)
+
+    const [showAuditDialog, setShowAuditDialog] = useState(false);
+    const [auditSelection, setAuditSelection] = useState({
+        duplicates: false,
+        missingType: false,
+        missingStatus: false,
+    });
+    const toggleAuditSelection = (key: "duplicates" | "missingType" | "missingStatus") => {
+        setAuditSelection(prev => ({ ...prev, [key]: !prev[key] }));
+    };
+
+    // Fetch TSA list
+    useEffect(() => {
+        const fetchTSA = async () => {
+            try {
+                const res = await fetch(
+                    "/api/UserManagement/FetchTSA?Role=Territory%20Sales%20Associate"
+                );
+                const json = await res.json();
+
+                if (Array.isArray(json)) {
+                    const formatted = json.map((user: any) => ({
+                        value: user.ReferenceID,
+                        label: `${user.Firstname} ${user.Lastname}`,
+                    }));
+                    setTsaList([{ value: "all", label: "All TSA" }, ...formatted]);
+                } else {
+                    console.error("Unexpected TSA response:", json);
+                }
+            } catch (err) {
+                console.error("Error fetching TSA list:", err);
+            }
+        };
+        fetchTSA();
+    }, []);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsFetching(true)
+            const toastId = toast.loading("Fetching customer data...")
+            try {
+                const response = await fetch("/api/Data/Applications/Taskflow/CustomerDatabase/Fetch")
+                const json = await response.json()
+                setCustomers(json.data || [])
+                toast.success("Customer data loaded successfully!", { id: toastId })
+            } catch (err) {
+                console.error("Error fetching customers:", err)
+                toast.error("Failed to load customer data.", { id: toastId })
+            } finally {
+                setIsFetching(false)
+            }
+        }
+        fetchData()
+    }, [])
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event
+        if (active.id !== over?.id) {
+            const oldIndex = customers.findIndex((c) => c.id === active.id)
+            const newIndex = customers.findIndex((c) => c.id === over?.id)
+            setCustomers(arrayMove(customers, oldIndex, newIndex))
+        }
+    }
+
+    // 🔹 Dynamic filters
+    const typeOptions = useMemo(() => {
+        const types = new Set(customers.map((c) => c.typeclient).filter(Boolean))
+        return ["all", ...Array.from(types)]
+    }, [customers])
+
+    const statusOptions = useMemo(() => {
+        const statuses = new Set(customers.map((c) => c.status).filter(Boolean))
+        return ["all", ...Array.from(statuses)]
+    }, [customers])
+
+    useEffect(() => {
+        setIsFiltering(true)
+        const timer = setTimeout(() => {
+            setIsFiltering(false)
+            toast.info("Filter updated.")
+        }, 600)
+        return () => clearTimeout(timer)
+    }, [search, filterType, filterStatus])
+
+
+    // 🔍 Filtered + Search
+    useEffect(() => setPage(1), [search, filterType, filterStatus])
+
+    const filtered = useMemo(() =>
+        customers
+            .filter((c) =>
+                [c.companyname, c.contactperson, c.emailaddress, c.area, c.manager, c.tsm]
+                    .some((field) => field?.toLowerCase().includes(search.toLowerCase()))
+            )
+            .filter((c) => (filterType === "all" ? true : c.typeclient === filterType))
+            .filter((c) => (filterStatus === "all" ? true : c.status === filterStatus))
+            .filter((c) =>
+                filterTSA === "all"
+                    ? true
+                    : c.referenceid?.trim().toLowerCase() === filterTSA.trim().toLowerCase()
+            )
+
+            .filter((c) => {
+                if (!startDate && !endDate) return true
+                const created = new Date(c.date_created)
+                const start = startDate ? new Date(startDate) : null
+                const end = endDate ? new Date(endDate) : null
+                if (start && created < start) return false
+                if (end && created > end) return false
+                return true
+            }),
+        [customers, search, filterType, filterStatus, filterTSA, startDate, endDate]
+    )
+
+    // 🧭 Pagination + display switch
+    const displayData = useMemo(() => {
+        if (!isAuditView) return filtered
+        if (auditFilter === "" || auditFilter === "all") return audited
+        if (auditFilter === "missingType")
+            return audited.filter((c) => !c.typeclient?.trim() && c.status?.trim())
+        if (auditFilter === "missingStatus")
+            return audited.filter((c) => !c.status?.trim() && c.typeclient?.trim())
+        if (auditFilter === "duplicates")
+            return audited.filter((c) => duplicateIds.has(c.id))
+        return audited
+    }, [filtered, audited, isAuditView, auditFilter, duplicateIds])
+
+    const totalPages = Math.max(1, Math.ceil(displayData.length / rowsPerPage))
+    const current = displayData.slice((page - 1) * rowsPerPage, page * rowsPerPage)
+
+    const handleReturn = () => {
+        setIsAuditView(false)
+        setAudited([])
+        setDuplicateIds(new Set())
+    }
+
+    const tsaMap = useMemo(() => {
+        const map: Record<string, string> = {};
+        tsaList.forEach((t) => {
+            map[t.value.toLowerCase()] = t.label;
+        });
+        return map;
+    }, [tsaList]);
+
+    const handleBulkDelete = () => {
+        if (selectedIds.size === 0) return toast.error("No customers selected.");
+        setShowDeleteDialog(true);
+    };
+
+    const executeBulkDelete = async () => {
+        if (selectedIds.size === 0) return toast.error("No customers selected.");
+
+        const idsArray = Array.from(selectedIds);
+        let deletedCount = 0;
+        let loadingToastId = toast.loading(`Deleting 0/${idsArray.length}...`);
+
+        try {
+            const res = await fetch(`/api/Data/Applications/Taskflow/CustomerDatabase/BulkDelete`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userIds: idsArray }),
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                for (let i = 0; i < idsArray.length; i++) {
+                    deletedCount++;
+                    toast.dismiss(loadingToastId);
+                    loadingToastId = toast.loading(`Deleting ${deletedCount}/${idsArray.length}...`);
+                    await new Promise((res) => setTimeout(res, 30));
+                }
+
+                toast.success(`Deleted ${deletedCount} customers.`);
+
+                // Remove deleted customers from state
+                setCustomers((prev) => prev.filter((c) => !selectedIds.has(c.id)));
+                setSelectedIdsAction(new Set());
+
+            } else {
+                toast.error(result.error || "Bulk delete failed.");
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Bulk delete failed.");
+        }
+    };
+
+    const toggleSelect = (id: number) => {
+        const newSet = new Set(selectedIds)
+        if (newSet.has(id)) newSet.delete(id)
+        else newSet.add(id)
+        setSelectedIdsAction(newSet)
+        setSelectAll(newSet.size === current.length)
+    }
+
+    const handleSelectAll = () => {
+        if (selectAll) {
+            setSelectedIdsAction(new Set())
+            setSelectAll(false)
+        } else {
+            setSelectedIdsAction(new Set(current.map(c => c.id)))
+            setSelectAll(true)
+        }
+    }
+
+    return (
+        <SidebarProvider>
+            <AppSidebar userId={userId} />
+            <SidebarInset>
+                {/* Header */}
+                <header className="flex h-16 shrink-0 items-center gap-2 px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Button variant="outline" size="sm" onClick={() => router.push("/dashboard")}>
+                        Home
+                    </Button>
+                    <Separator orientation="vertical" className="h-4" />
+                    <Breadcrumb>
+                        <BreadcrumbList>
+                            <BreadcrumbItem>
+                                <BreadcrumbLink href="#">Taskflow</BreadcrumbLink>
+                            </BreadcrumbItem>
+                            <BreadcrumbSeparator />
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>Customer Database</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        </BreadcrumbList>
+                    </Breadcrumb>
+                </header>
+
+                {/* 🔍 Search + Filters */}
+                <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-between gap-3 px-4 py-3">
+                    {/* 🔎 Search Input */}
+                    <div className="relative w-full sm:max-w-xs">
+                        <Search className="absolute left-2 top-2.5 size-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Search customers..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="pl-8 w-full pr-8"
+                        />
+                        {isFiltering && (
+                            <Loader2 className="absolute right-2 top-2.5 size-4 animate-spin text-muted-foreground" />
+                        )}
+                    </div>
+
+                    {/* 🧩 Right-Side Button Group */}
+                    <div className="flex justify-end w-full sm:w-auto">
+                        <div className="inline-flex flex-wrap gap-2 sm:gap-0 sm:flex-nowrap border border-border rounded-md overflow-hidden">
+                            <ButtonGroup aria-label="Audit Filter Buttons" className="flex">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowFilters((prev) => !prev)}
+                                    className="rounded-none sm:rounded-l-md w-full sm:w-auto"
+                                >
+                                    {showFilters ? "Hide Filters" : "Show Filters"}
+                                </Button>
+
+                                <ImportDialog />
+
+                                {/* Download */}
+                                <Download
+                                    data={filtered}
+                                    filename="CustomerDatabase"
+
+                                />
+
+                                <Button
+                                    onClick={handleBulkDelete}
+                                    variant="destructive"
+                                    size="sm"
+                                    className="rounded-none sm:rounded-r-md border-l sm:border-l-0"
+                                    disabled={selectedIds.size === 0}
+                                >
+                                    Delete Selected ({selectedIds.size})
+                                </Button>
+
+                                {/* Audit / Return */}
+                                {!isAuditView ? (
+                                    <Audit
+                                        customers={customers}
+                                        setAuditedAction={setAudited}
+                                        setDuplicateIdsAction={setDuplicateIds}
+                                        setIsAuditViewAction={setIsAuditView}
+                                    />
+                                ) : (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleReturn}
+                                        className="rounded-none sm:rounded-r-md border-l sm:border-l-0"
+                                    >
+                                        Return to List
+                                    </Button>
+                                )}
+                            </ButtonGroup>
+                        </div>
+                    </div>
+
+                    {/* 🧮 Filters Section (collapsible) */}
+                    {showFilters && (
+                        <div className="flex flex-wrap justify-start sm:justify-end gap-2 w-full border-border text-sm">
+                            <ButtonGroup aria-label="Audit Filter Buttons" className="flex">
+                                <Select value={filterTSA} onValueChange={setFilterTSA}>
+                                    <SelectTrigger className="w-full sm:w-[200px]">
+                                        <SelectValue placeholder="Filter by TSA" />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-none sm:rounded-r-md border-l sm:border-l-0 capitalize">
+                                        {tsaList.map((t) => (
+                                            <SelectItem key={t.value} value={t.value}>
+                                                {t.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Calendar
+                                    startDate={startDate}
+                                    endDate={endDate}
+                                    setStartDateAction={setStartDate}
+                                    setEndDateAction={setEndDate}
+                                />
+                                <Select value={filterType} onValueChange={setFilterType}>
+                                    <SelectTrigger className="rounded-none sm:rounded-r-md border-l sm:border-l-0">
+                                        <SelectValue placeholder="Filter by Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {typeOptions.map((t) => (
+                                            <SelectItem key={t} value={t}>
+                                                {t === "all" ? "All Types" : t}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                                    <SelectTrigger className="rounded-none sm:rounded-r-md border-l sm:border-l-0">
+                                        <SelectValue placeholder="Filter by Status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {statusOptions.map((s) => (
+                                            <SelectItem key={s} value={s}>
+                                                {s === "all" ? "All Status" : s}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Select
+                                    value={rowsPerPage.toString()}
+                                    onValueChange={(v) => {
+                                        setRowsPerPage(Number(v))
+                                        setPage(1)
+                                    }}
+                                >
+                                    <SelectTrigger className="rounded-none sm:rounded-r-md border-l sm:border-l-0">
+                                        <SelectValue placeholder="Rows/Page" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="20">20</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                        <SelectItem value="100">100</SelectItem>
+                                        <SelectItem value="1000">1000</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </ButtonGroup>
+
+                        </div>
+                    )}
+                </div>
+
+                {isAuditView && (
+                    <div className="mx-4 mb-2 mt-1 flex flex-col gap-2 bg-muted/50 rounded-md px-4 py-2 border border-border text-[13px]">
+                        {/* 🔍 Top Row: Summary + Buttons */}
+                        <div className="flex justify-between items-center flex-wrap gap-2">
+                            {/* 🧾 Audit Summary (left) */}
+                            <div
+                                className="font-medium cursor-pointer select-none underline text-red-600"
+                                onClick={() => {
+                                    // Default: lahat ng audit type unchecked
+                                    setAuditSelection({
+                                        duplicates: true,      // pwede default checked
+                                        missingType: true,
+                                        missingStatus: true,
+                                    });
+                                    setShowAuditDialog(true);
+                                }}
+                            >
+                                🧾 Audit Summary: <span className="font-semibold text-red-600">{audited.length}</span> total issues found
+                            </div>
+
+
+
+                            {/* 🧩 Button Group Filters (right side) */}
+                            <div className="flex flex-wrap gap-2 justify-end ml-auto">
+                                <ButtonGroup aria-label="Audit Filter Buttons" className="flex">
+                                    <Button
+                                        size="sm"
+                                        variant={auditFilter === "missingType" ? "secondary" : "outline"}
+                                        className={`rounded-l-md ${auditFilter === "missingType" ? "bg-yellow-100 text-yellow-900" : ""
+                                            }`}
+                                        onClick={() =>
+                                            setAuditFilter(auditFilter === "missingType" ? "" : "missingType")
+                                        }
+                                    >
+                                        ⚠ Missing Type:{" "}
+                                        {audited.filter((c) => !c.typeclient?.trim() && c.status?.trim()).length}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={auditFilter === "missingStatus" ? "secondary" : "outline"}
+                                        className={
+                                            auditFilter === "missingStatus"
+                                                ? "bg-yellow-100 text-yellow-900"
+                                                : ""
+                                        }
+                                        onClick={() =>
+                                            setAuditFilter(auditFilter === "missingStatus" ? "" : "missingStatus")
+                                        }
+                                    >
+                                        ⚠ Missing Status:{" "}
+                                        {audited.filter((c) => !c.status?.trim() && c.typeclient?.trim()).length}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={auditFilter === "duplicates" ? "secondary" : "outline"}
+                                        className={`rounded-r-md ${auditFilter === "duplicates" ? "bg-red-100 text-red-900" : ""
+                                            }`}
+                                        onClick={() =>
+                                            setAuditFilter(auditFilter === "duplicates" ? "" : "duplicates")
+                                        }
+                                    >
+                                        🔁 Duplicates: {Array.from(duplicateIds).length}
+                                    </Button>
+                                </ButtonGroup>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Selected Customers?</DialogTitle>
+                            <DialogDescription>
+                                You are about to delete {selectedIds.size} customers. This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={async () => {
+                                    setShowDeleteDialog(false);
+                                    await executeBulkDelete();
+                                }}
+                            >
+                                Delete
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {(audited.length > 0 || duplicateIds.size > 0) && (
+                    <Dialog open={showAuditDialog} onOpenChange={setShowAuditDialog}>
+                        <DialogContent className="max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Audit Summary Details</DialogTitle>
+                                <DialogDescription>
+                                    Here’s the breakdown of the audited data. You can select which issues to highlight:
+                                </DialogDescription>
+                            </DialogHeader>
+
+                            <div className="flex flex-col gap-2 mt-2 text-sm">
+                                {duplicateIds.size > 0 && (
+                                    <label className="flex justify-between items-center gap-2">
+                                        <span>Duplicates:</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold text-red-600">{duplicateIds.size}</span>
+                                            <input
+                                                type="checkbox"
+                                                checked={auditSelection.duplicates}
+                                                onChange={() => toggleAuditSelection("duplicates")}
+                                            />
+                                        </div>
+                                    </label>
+                                )}
+                                {audited.some(c => !c.typeclient?.trim() && c.status?.trim()) && (
+                                    <label className="flex justify-between items-center gap-2">
+                                        <span>Missing Type:</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold text-yellow-600">
+                                                {audited.filter(c => !c.typeclient?.trim() && c.status?.trim()).length}
+                                            </span>
+                                            <input
+                                                type="checkbox"
+                                                checked={auditSelection.missingType}
+                                                onChange={() => toggleAuditSelection("missingType")}
+                                            />
+                                        </div>
+                                    </label>
+                                )}
+                                {audited.some(c => !c.status?.trim() && c.typeclient?.trim()) && (
+                                    <label className="flex justify-between items-center gap-2">
+                                        <span>Missing Status:</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="font-semibold text-yellow-600">
+                                                {audited.filter(c => !c.status?.trim() && c.typeclient?.trim()).length}
+                                            </span>
+                                            <input
+                                                type="checkbox"
+                                                checked={auditSelection.missingStatus}
+                                                onChange={() => toggleAuditSelection("missingStatus")}
+                                            />
+                                        </div>
+                                    </label>
+                                )}
+                            </div>
+
+                            <DialogFooter className="flex justify-end gap-2 mt-4">
+                                <Button variant="outline" onClick={() => setShowAuditDialog(false)}>Close</Button>
+                                <Button
+                                    onClick={async () => {
+                                        setShowAuditDialog(false);
+
+                                        // Determine which audit types are selected
+                                        if (auditSelection.duplicates) setAuditFilter("duplicates");
+                                        else if (auditSelection.missingType) setAuditFilter("missingType");
+                                        else if (auditSelection.missingStatus) setAuditFilter("missingStatus");
+                                        else setAuditFilter("all");
+
+                                        // 🔹 Bulk update status if "Missing Status" is checked
+                                        if (auditSelection.missingStatus) {
+                                            const missingStatusIds = audited
+                                                .filter(c => !c.status?.trim() && c.typeclient?.trim())
+                                                .map(c => c.id);
+
+                                            if (missingStatusIds.length > 0) {
+                                                try {
+                                                    const res = await fetch(
+                                                        "/api/Data/Applications/Taskflow/CustomerDatabase/BulkEditStatus",
+                                                        {
+                                                            method: "PUT",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({ userIds: missingStatusIds, status: "Active" }),
+                                                        }
+                                                    );
+                                                    const json = await res.json();
+
+                                                    if (json.success) {
+                                                        toast.success(`Updated status for ${missingStatusIds.length} customers.`);
+                                                        setCustomers(prev =>
+                                                            prev.map(c =>
+                                                                missingStatusIds.includes(c.id) ? { ...c, status: "Active" } : c
+                                                            )
+                                                        );
+                                                    } else {
+                                                        toast.error(json.error || "Failed to update statuses.");
+                                                    }
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    toast.error("Failed to update statuses.");
+                                                }
+                                            }
+                                        }
+                                    }}
+                                >
+                                    Take Action
+                                </Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
+
+
+                {/* Table */}
+                <div className="mx-4 border border-border shadow-sm rounded-lg">
+                    <div className="overflow-auto min-h-[200px] flex items-center justify-center">
+                        {isFetching ? (
+                            <div className="py-10 text-center flex flex-col items-center gap-2 text-muted-foreground text-xs">
+                                <Loader2 className="size-6 animate-spin" />
+                                <span>Loading customers...</span>
+                            </div>
+                        ) : current.length > 0 ? (
+                            <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
+                                <SortableContext items={current.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                                    <Table className="whitespace-nowrap text-[13px] min-w-full">
+                                        <TableHeader className="bg-muted sticky top-0 z-10">
+                                            <TableRow>
+                                                <TableHead className="w-8 text-center">
+                                                    <input type="checkbox" checked={selectAll} onChange={handleSelectAll} />
+                                                </TableHead>
+                                                <TableHead>Company</TableHead>
+                                                <TableHead>Contact</TableHead>
+                                                <TableHead>Email</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>Area</TableHead>
+                                                <TableHead>TSA</TableHead>
+                                                <TableHead>TSM</TableHead>
+                                                <TableHead>Manager</TableHead>
+                                                <TableHead>Date Created</TableHead>
+                                                <TableHead>Date Updated</TableHead>
+                                                <TableHead>Next Available</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+
+                                        <TableBody className="text-[12px]">
+                                            {current.map((c) => {
+                                                const isMissingType = !c.typeclient?.trim()
+                                                const isMissingStatus = !c.status?.trim()
+                                                const isDuplicate = duplicateIds.has(c.id)
+                                                const isSelected = selectedIds.has(c.id)
+
+                                                return (
+                                                    <DraggableRow key={c.id} item={c}>
+                                                        <TableCell className="text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => toggleSelect(c.id)}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell
+                                                            className={`uppercase whitespace-normal break-words max-w-[250px] ${isDuplicate ? "bg-red-100" : isMissingType || isMissingStatus ? "bg-yellow-100" : ""
+                                                                }`}
+                                                        >
+                                                            {c.companyname}
+                                                        </TableCell>
+                                                        <TableCell className="capitalize whitespace-normal break-words max-w-[200px]">
+                                                            {c.contactperson}
+                                                        </TableCell>
+                                                        <TableCell className="whitespace-normal break-words max-w-[250px]">
+                                                            {c.emailaddress}
+                                                        </TableCell>
+                                                        <TableCell className={isMissingType ? "bg-yellow-100" : ""}>
+                                                            {c.typeclient || "—"}
+                                                        </TableCell>
+                                                        <TableCell className="text-center">
+                                                            {c.status ? (
+                                                                (() => {
+                                                                    const status = c.status.trim().toLowerCase()
+                                                                    switch (status) {
+                                                                        case "active":
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="bg-green-500/90 hover:bg-green-600 text-white dark:bg-green-600 dark:hover:bg-green-700 flex items-center gap-1 transition-colors duration-200"
+                                                                                >
+                                                                                    <BadgeCheck className="size-3.5" />
+                                                                                    Active
+                                                                                </Badge>
+                                                                            )
+                                                                        case "new client":
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="bg-blue-500/90 hover:bg-blue-600 text-white dark:bg-blue-600 dark:hover:bg-blue-700 flex items-center gap-1 transition-colors duration-200"
+                                                                                >
+                                                                                    <UserCheck className="size-3.5" />
+                                                                                    New Client
+                                                                                </Badge>
+                                                                            )
+                                                                        case "non-buying":
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="bg-yellow-500/90 hover:bg-yellow-600 text-white dark:bg-yellow-600 dark:hover:bg-yellow-700 flex items-center gap-1 transition-colors duration-200"
+                                                                                >
+                                                                                    <AlertTriangle className="size-3.5" />
+                                                                                    Non-Buying
+                                                                                </Badge>
+                                                                            )
+                                                                        case "inactive":
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="bg-red-500/90 hover:bg-red-600 text-white dark:bg-red-600 dark:hover:bg-red-700 flex items-center gap-1 transition-colors duration-200"
+                                                                                >
+                                                                                    <XCircle className="size-3.5" />
+                                                                                    Inactive
+                                                                                </Badge>
+                                                                            )
+                                                                        case "on hold":
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="bg-stone-500/90 hover:bg-stone-600 text-white dark:bg-stone-600 dark:hover:bg-stone-700 flex items-center gap-1 transition-colors duration-200"
+                                                                                >
+                                                                                    <PauseCircle className="size-3.5" />
+                                                                                    On Hold
+                                                                                </Badge>
+                                                                            )
+                                                                        case "used":
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="bg-blue-900 hover:bg-blue-800 text-white flex items-center gap-1 transition-colors duration-200"
+                                                                                >
+                                                                                    <Clock className="size-3.5" />
+                                                                                    Used
+                                                                                </Badge>
+                                                                            )
+                                                                        case "for deletion":
+                                                                        case "remove":
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="secondary"
+                                                                                    className="bg-red-600 hover:bg-red-700 text-white dark:bg-red-700 dark:hover:bg-red-800 flex items-center gap-1 transition-colors duration-200"
+                                                                                >
+                                                                                    <UserX className="size-3.5" />
+                                                                                    {c.status}
+                                                                                </Badge>
+                                                                            )
+                                                                        default:
+                                                                            return (
+                                                                                <Badge
+                                                                                    variant="outline"
+                                                                                    className="text-muted-foreground hover:bg-muted transition-colors duration-200"
+                                                                                >
+                                                                                    {c.status}
+                                                                                </Badge>
+                                                                            )
+                                                                    }
+                                                                })()
+                                                            ) : (
+                                                                <Badge
+                                                                    variant="outline"
+                                                                    className="text-muted-foreground hover:bg-muted transition-colors duration-200"
+                                                                >
+                                                                    —
+                                                                </Badge>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>{c.area}</TableCell>
+                                                        <TableCell className="capitalize">
+                                                            {tsaMap[c.referenceid?.trim().toLowerCase()] || c.referenceid || "-"}
+                                                        </TableCell>
+
+                                                        <TableCell>{c.tsm}</TableCell>
+                                                        <TableCell>{c.manager}</TableCell>
+                                                        <TableCell>{new Date(c.date_created).toLocaleDateString()}</TableCell>
+                                                        <TableCell>{new Date(c.date_updated).toLocaleDateString()}</TableCell>
+                                                        <TableCell>
+                                                            {c.next_available_date
+                                                                ? new Date(c.next_available_date).toLocaleDateString()
+                                                                : "-"}
+                                                        </TableCell>
+                                                    </DraggableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </SortableContext>
+                            </DndContext>
+                        ) : (
+                            <div className="py-10 text-center text-xs text-muted-foreground">
+                                No customers found.
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Pagination */}
+                <div className="flex justify-center items-center gap-4 my-4">
+                    {/* Pagination */}
+                    <Pagination
+                        page={page}
+                        totalPages={totalPages}
+                        onPageChangeAction={setPage}
+                    />
+                </div>
+            </SidebarInset>
+        </SidebarProvider>
+    )
+}
